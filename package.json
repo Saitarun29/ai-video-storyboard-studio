@@ -1,0 +1,7 @@
+{
+  "name": "ai-video-storyboard-studio",
+  "version": "1.0.0",
+  "description": "Turn one idea into a timed AI video storyboard: beats, shot list, style bible and per-shot prompts for Kling, Sora, Veo and Nanobanana/Krea keyframes.",
+  "type": "module",
+  "private": true
+}

@@ -1,0 +1,220 @@
+{
+  "name": "Storyboard → Google Sheet (AI Video Storyboard Studio)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Storyboard → Google Sheet\nPart of **AI Video Storyboard Studio** by Sai Tarun (saitarun.com).\n\n**What it does:** POST a brief to the webhook → Gemini writes a timed shot list with Kling / Sora / Veo / keyframe prompts → each shot becomes a row in your production sheet (status *To generate*) → the webhook returns a summary.\n\n**Setup**\n1. Set env vars: `GEMINI_API_KEY`, `STORYBOARD_SHEET_ID`.\n2. In the sheet, create a tab named **Shots** (headers are written automatically on first append).\n3. Open *Append to Google Sheets* and pick your Google Sheets OAuth credential.\n\n**Test**\n```\ncurl -X POST <webhook-url>/storyboard-to-sheet \\\n -H 'Content-Type: application/json' \\\n -d '{\"idea\":\"Café morning reel, latte art and croissants\",\"brand\":\"Bean There\",\"duration\":15,\"aspect\":\"9:16\",\"mood\":\"cozy\"}'\n```\nNo secrets are stored in this file.",
+        "height": 520,
+        "width": 520,
+        "color": 5
+      },
+      "id": "f14382f2-a2c4-5f26-9b3d-98109e0f2716",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "storyboard-to-sheet",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4c83589a-3883-540f-9901-45e706747570",
+      "name": "Webhook: storyboard brief",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        240
+      ],
+      "webhookId": "71e53285-a172-51be-b445-89c7587d8938"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate + normalise the brief coming from the webhook\nconst b = $json.body || $json;\nconst idea = String(b.idea || '').trim().slice(0, 600);\nif (idea.length < 8) throw new Error('idea is required (8+ characters)');\nconst duration = [15, 30, 60].includes(Number(b.duration)) ? Number(b.duration) : 30;\nconst aspect = ['9:16', '16:9', '1:1'].includes(b.aspect) ? b.aspect : '16:9';\nconst brand = String(b.brand || '').slice(0, 80);\nconst mood = String(b.mood || 'cinematic').slice(0, 40);\nconst style = String(b.style || 'cinematic realism').slice(0, 40);\nconst project = String(b.project || `${brand || 'Untitled'} ${duration}s ${aspect}`).slice(0, 120);\nconst prompt = `You are a senior commercial director and AI video prompt engineer.\nCreate a storyboard as STRICT JSON for: idea \"${idea}\", brand \"${brand}\", mood ${mood}, style ${style}, total ${duration}s (shot durations MUST sum to ${duration}), aspect ${aspect}.\nReturn { \"title\", \"logline\", \"bible\": { \"subject\",\"character\",\"wardrobe\",\"setting\",\"palette\":[3 hex],\"lighting\",\"lensPackage\",\"grade\",\"negative\",\"consistencyTokens\" },\n\"shots\": [ { \"beat\":\"Hook|Build|Turn|Reveal|CTA\", \"duration\", \"camera\", \"lens\", \"lighting\", \"action\", \"transition\", \"sfx\", \"music\", \"vo\",\n\"prompts\": { \"kling\", \"sora\", \"veo\", \"keyframe\" } } ] }.\nKling = concise subject/action/scene/camera/lighting/style + Negative line. Sora = cinematic prose. Veo = labelled lines incl. Audio. Keyframe = still image prompt for Nanobanana/Krea.`;\nreturn [{ json: { idea, brand, mood, style, duration, aspect, project, prompt } }];"
+      },
+      "id": "e78ea608-8482-5f7e-b52f-b61c4f30ead6",
+      "name": "Validate brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { responseMimeType: 'application/json', temperature: 0.8, maxOutputTokens: 8192 } }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "3eae2175-6dce-55ea-810a-8c02cc282edb",
+      "name": "Gemini: write storyboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Gemini JSON and turn every shot into one sheet row\nconst brief = $('Validate brief').first().json;\nconst text = $json.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '{}';\nlet sb;\ntry { sb = JSON.parse(text); } catch (e) { throw new Error('Gemini did not return valid JSON'); }\nconst shots = Array.isArray(sb.shots) ? sb.shots : [];\nif (!shots.length) throw new Error('No shots returned');\n// rescale durations so they sum exactly to the target (0.5s steps)\nconst sum = shots.reduce((a, s) => a + (Number(s.duration) || 1), 0);\nlet t = 0;\nconst createdAt = new Date().toISOString();\nreturn shots.map((s, i) => {\n  let d = Math.max(0.5, Math.round(((Number(s.duration) || 1) / sum) * brief.duration * 2) / 2);\n  if (i === shots.length - 1) d = Math.max(0.5, Math.round((brief.duration - t) * 10) / 10);\n  const row = {\n    'Project': brief.project,\n    'Title': sb.title || '',\n    'Shot': i + 1,\n    'Beat': s.beat || '',\n    'Start (s)': Math.round(t * 10) / 10,\n    'Duration (s)': d,\n    'Camera': s.camera || '',\n    'Lens': s.lens || '',\n    'Lighting': s.lighting || '',\n    'Action': s.action || '',\n    'Transition': s.transition || '',\n    'SFX': s.sfx || '',\n    'Music': s.music || '',\n    'VO': s.vo || '',\n    'Kling Prompt': s.prompts?.kling || '',\n    'Sora Prompt': s.prompts?.sora || '',\n    'Veo Prompt': s.prompts?.veo || '',\n    'Keyframe Prompt': s.prompts?.keyframe || '',\n    'Consistency Tokens': sb.bible?.consistencyTokens || '',\n    'Aspect': brief.aspect,\n    'Status': 'To generate',\n    'Created At': createdAt,\n  };\n  t += d;\n  return { json: row };\n});"
+      },
+      "id": "3b3ace3a-79ef-5bda-8c2c-1ae719d47a28",
+      "name": "Split shots to rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.STORYBOARD_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Shots",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "45718569-83a6-53ec-8111-e90bddba9698",
+      "name": "Append to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        880,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// One summary item for the webhook response\nconst rows = $('Split shots to rows').all().map(i => i.json);\nreturn [{ json: {\n  ok: true,\n  project: rows[0]?.Project,\n  title: rows[0]?.Title,\n  shots: rows.length,\n  totalSeconds: Math.round(rows.reduce((a, r) => a + Number(r['Duration (s)']), 0) * 10) / 10,\n  sheet: `https://docs.google.com/spreadsheets/d/${$env.STORYBOARD_SHEET_ID}`,\n} }];"
+      },
+      "id": "a8a3ec0a-7f6c-5603-9935-415b1eec04fd",
+      "name": "Build response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "c7174ddd-152a-5819-b637-42b739ad8a14",
+      "name": "Respond to webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: storyboard brief": {
+      "main": [
+        [
+          {
+            "node": "Validate brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate brief": {
+      "main": [
+        [
+          {
+            "node": "Gemini: write storyboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: write storyboard": {
+      "main": [
+        [
+          {
+            "node": "Split shots to rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split shots to rows": {
+      "main": [
+        [
+          {
+            "node": "Append to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Build response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build response": {
+      "main": [
+        [
+          {
+            "node": "Respond to webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

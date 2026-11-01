@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Storyboard Studio · Shot lists and prompts for Kling, Sora and Veo</title>
+  <meta name="description" content="Turn one brief into a timed AI video storyboard: beats, a shot list that sums to the second, one style bible and per-shot prompts for Kling, Sora, Google Veo and keyframe tools." />
+  <meta property="og:title" content="AI Video Storyboard Studio" />
+  <meta property="og:description" content="One brief in. A timed shot list, style bible and tool-ready prompts for Kling, Sora, Veo and Nanobanana out." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://ai-video-storyboard-studio.vercel.app" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#F7F7F5" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111'/%3E%3Crect x='7' y='10' width='5' height='12' rx='1' fill='%23fff'/%3E%3Crect x='13.5' y='10' width='5' height='12' rx='1' fill='%23fff' opacity='.7'/%3E%3Crect x='20' y='10' width='5' height='12' rx='1' fill='%23fff' opacity='.4'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+  <a class="skip" href="#workspace">Skip to results</a>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./" aria-label="AI Video Storyboard Studio home">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="currentColor"/><rect x="7" y="10" width="5" height="12" rx="1" fill="#fff"/><rect x="13.5" y="10" width="5" height="12" rx="1" fill="#fff" opacity=".7"/><rect x="20" y="10" width="5" height="12" rx="1" fill="#fff" opacity=".4"/></svg>
+        <strong>Storyboard Studio</strong>
+      </a>
+      <span class="divider" aria-hidden="true"></span>
+      <p class="value-line">Timed shot lists and per-tool prompts for Kling, Sora and Veo</p>
+      <div class="topbar-right">
+        <span id="modeBadge" class="badge" title="Whether results come from Gemini or the built-in demo engine">Not run yet</span>
+        <a class="icon-link" href="https://github.com/Saitarun29/ai-video-storyboard-studio" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="app">
+    <aside class="panel brief" aria-labelledby="briefTitle">
+      <div class="panel-head">
+        <h2 id="briefTitle">Brief</h2>
+        <span class="muted small">Required: idea</span>
+      </div>
+
+      <div class="field">
+        <span class="label" id="presetsLabel">Presets</span>
+        <div class="presets" id="presets" role="group" aria-labelledby="presetsLabel"></div>
+      </div>
+
+      <form id="briefForm" autocomplete="off" novalidate>
+        <div class="field">
+          <label class="label" for="idea">Idea</label>
+          <textarea id="idea" name="idea" rows="4" maxlength="600" placeholder="Launch film for a hand-finished automatic watch: heritage craft meets modern city nights" required aria-describedby="ideaHelp"></textarea>
+          <div class="field-foot"><span id="ideaHelp" class="muted">What the film is for, in a sentence or two.</span><span class="counter tnum"><span id="ideaCount">0</span>/600</span></div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label class="label" for="brand">Brand or product</label>
+            <input id="brand" name="brand" maxlength="80" placeholder="Aurelle" />
+          </div>
+          <div class="field">
+            <label class="label" for="mood">Mood</label>
+            <input id="mood" name="mood" maxlength="40" list="moods" placeholder="luxurious" />
+            <datalist id="moods"><option>luxurious</option><option>cozy</option><option>energetic</option><option>epic</option><option>calm</option><option>mysterious</option><option>playful</option></datalist>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label" for="style">Visual style</label>
+          <select id="style" name="style">
+            <option value="cinematic">Cinematic realism</option>
+            <option value="noir">Moody noir</option>
+            <option value="warmfilm">Warm 35mm film</option>
+            <option value="cleantech">Clean tech, minimal</option>
+            <option value="documentary">Soft documentary</option>
+            <option value="surreal">Surreal, dreamlike</option>
+          </select>
+        </div>
+        <div class="field">
+          <span class="label" id="durLabel">Duration</span>
+          <div class="seg" role="radiogroup" aria-labelledby="durLabel" data-name="duration">
+            <button type="button" role="radio" data-value="15" aria-checked="false">15s</button>
+            <button type="button" role="radio" data-value="30" aria-checked="true">30s</button>
+            <button type="button" role="radio" data-value="60" aria-checked="false">60s</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label" id="arLabel">Aspect ratio</span>
+          <div class="seg" role="radiogroup" aria-labelledby="arLabel" data-name="aspect">
+            <button type="button" role="radio" data-value="9:16" aria-checked="false">9:16</button>
+            <button type="button" role="radio" data-value="16:9" aria-checked="true">16:9</button>
+            <button type="button" role="radio" data-value="1:1" aria-checked="false">1:1</button>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" id="generateBtn" type="submit">
+          <span class="spinner" aria-hidden="true"></span><span class="btn-label">Generate storyboard</span>
+        </button>
+        <p class="hint" id="formHint" role="status">Pick a preset to see a full storyboard in one click.</p>
+      </form>
+    </aside>
+
+    <main class="workspace" id="workspace" tabindex="-1">
+      <section id="emptyState" class="panel empty" aria-labelledby="emptyTitle">
+        <h1 id="emptyTitle">No storyboard yet</h1>
+        <p class="muted">Write a brief or start from a preset. You get beats, a shot list that sums exactly to the target length, one style bible, and prompts in each tool's own format.</p>
+        <div class="table-wrap">
+          <table class="preset-table">
+            <thead><tr><th scope="col">Preset</th><th scope="col">Length</th><th scope="col">Aspect</th><th scope="col">Style</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+            <tbody id="presetRows"></tbody>
+          </table>
+        </div>
+        <h2 class="section-title">How it works</h2>
+        <ol class="steps">
+          <li><span class="step-n tnum">01</span><div><b>Brief</b><span>Idea, brand, mood, length, aspect and visual style.</span></div></li>
+          <li><span class="step-n tnum">02</span><div><b>Structure</b><span>Hook, build, turn, reveal and CTA, with shot durations that add up exactly.</span></div></li>
+          <li><span class="step-n tnum">03</span><div><b>Bible</b><span>One character and style bible so clips match across tools.</span></div></li>
+          <li><span class="step-n tnum">04</span><div><b>Prompts</b><span>Each shot written for Kling, Sora, Veo (with audio) and a still keyframe.</span></div></li>
+          <li><span class="step-n tnum">05</span><div><b>Hand-off</b><span>Copy, export Markdown or JSON, or send shots to Google Sheets with n8n.</span></div></li>
+        </ol>
+      </section>
+
+      <div id="errorState" class="panel error" role="alert" hidden>
+        <div>
+          <p class="error-title">Could not generate the storyboard</p>
+          <p class="muted" id="errorMsg"></p>
+        </div>
+        <button class="btn" type="button" id="retryBtn">Try again</button>
+      </div>
+
+      <section id="results" class="results" hidden aria-live="polite" aria-busy="false" aria-labelledby="sumTitle">
+        <div class="panel summary">
+          <div class="summary-main">
+            <p class="eyebrow" id="sumKicker">Storyboard</p>
+            <h1 id="sumTitle"></h1>
+            <p class="logline" id="sumLogline"></p>
+          </div>
+          <div class="summary-actions">
+            <button class="btn" id="copyAllBtn" type="button">Copy prompts</button>
+            <button class="btn" id="mdBtn" type="button">Markdown</button>
+            <button class="btn" id="jsonBtn" type="button">JSON</button>
+          </div>
+          <dl class="stats" id="sumStats"></dl>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Timeline</h2>
+            <span class="status" id="tlTotal"></span>
+          </div>
+          <div class="tl">
+            <div class="tl-beats" id="tlBeats"></div>
+            <div class="tl-bar" id="tlBar"></div>
+            <div class="tl-ruler tnum" id="tlRuler" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <div class="panel board-panel">
+          <div class="panel-head">
+            <h2>Shot list</h2>
+            <div class="tabs" role="tablist" aria-label="Prompt format" id="tabs">
+              <button role="tab" type="button" data-tool="kling" aria-selected="true">Kling</button>
+              <button role="tab" type="button" data-tool="sora" aria-selected="false" tabindex="-1">Sora</button>
+              <button role="tab" type="button" data-tool="veo" aria-selected="false" tabindex="-1">Veo</button>
+              <button role="tab" type="button" data-tool="keyframe" aria-selected="false" tabindex="-1">Keyframe</button>
+            </div>
+          </div>
+          <p class="tab-note muted" id="tabNote"></p>
+          <div class="board" id="board" tabindex="0" role="region" aria-label="Shot cards, scroll horizontally"></div>
+        </div>
+
+        <div class="split">
+          <div class="panel">
+            <div class="panel-head"><h2>Character and style bible</h2></div>
+            <p class="muted sub">Paste the consistency tokens into every generation to keep palette, wardrobe and lenses fixed across tools.</p>
+            <div class="swatches" id="swatches"></div>
+            <dl class="kv" id="bibleList"></dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Beats and voiceover</h2></div>
+            <p class="muted sub">Timed at about 2.5 words per second so the read never fights the cut.</p>
+            <div class="table-wrap">
+              <table class="beat-table">
+                <thead><tr><th scope="col">Beat</th><th scope="col">Time</th><th scope="col">Voiceover</th></tr></thead>
+                <tbody id="beatRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p>Built by Sai Tarun · <a href="https://saitarun.com" target="_blank" rel="noopener">saitarun.com</a></p>
+      <nav class="footer-links" aria-label="Author links">
+        <a href="https://saitarun.com" target="_blank" rel="noopener">Site</a>
+        <a href="https://linkedin.com/in/ronanki-sai-tarun" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://x.com/SaiTarunRonanki" target="_blank" rel="noopener">X</a>
+        <a href="https://github.com/Saitarun29/ai-video-storyboard-studio" target="_blank" rel="noopener">GitHub repo</a>
+        <a class="btn btn-primary btn-sm" href="https://wa.me/918008941430?text=Hello%20Sai%20Tarun%20Ronanki,%20I%20want%20to%20discuss%20about%20my%20workflow" target="_blank" rel="noopener">Discuss your workflow</a>
+      </nav>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="assets/app.js"></script>
+</body>
+</html>
